@@ -4,11 +4,10 @@ from .operation import *
 from .bag_scan import *
 
 __all__ = [
-    "QuizRecognition",
+    "EventRecognition",
     "EnoughTrackingPermitRecognition",
     "LackOfTrackingPermitRecognition",
     "EnoughHuntLicenseRecognition",
     "LackOfHuntLicenseRecognition",
-    "QuizRecognition",
     "PotentialBagTestRecognition"
 ]

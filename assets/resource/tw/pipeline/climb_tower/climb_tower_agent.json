@@ -1,6 +1,12 @@
 {
   "星塔_节点_进行对话选择_agent": {
+    "attach": {
+      "lang_type": "tw"
+    }
+  },
+  "星塔_节点_进行对话选择_待移除_agent": {
     "recognition": {
+      "type": "OCR",
       "param": {
         "expected": [
           "就試試",
@@ -30,6 +36,7 @@
   },
   "星塔_节点_进入商店_agent": {
     "recognition": {
+      "type": "OCR",
       "param": {
         "expected": [
           "商店購物"
@@ -44,6 +51,7 @@
   },
   "星塔_节点_回到商店层_agent": {
     "recognition": {
+      "type": "OCR",
       "param": {
         "expected": [
           "商店購物"
@@ -53,6 +61,7 @@
   },
   "星塔_节点_商店_离开商店_agent": {
     "recognition": {
+      "type": "OCR",
       "param": {
         "expected": [
           "上樓"
@@ -62,6 +71,7 @@
   },
   "星塔_节点_商店_离开星塔_agent": {
     "recognition": {
+      "type": "OCR",
       "param": {
         "expected": [
           "離開星塔"
@@ -71,6 +81,7 @@
   },
   "星塔_保存记录_agent": {
     "recognition": {
+      "type": "OCR",
       "param": {
         "expected": [
           "儲存紀錄"
@@ -80,16 +91,17 @@
   },
   "星塔_确认_agent": {
     "recognition": {
+      "type": "OCR",
       "param": {
         "expected": [
           "確認"
         ]
-      },
-      "type": "OCR"
+      }
     }
   },
   "星塔_默契提升_agent": {
     "recognition": {
+      "type": "OCR",
       "param": {
         "expected": [
           "默契",
@@ -100,6 +112,7 @@
   },
   "星塔_点击空白处关闭_agent": {
     "recognition": {
+      "type": "OCR",
       "param": {
         "expected": [
           "點選空白",
@@ -111,6 +124,7 @@
   },
   "星塔_回到难度选择界面_agent": {
     "recognition": {
+      "type": "OCR",
       "param": {
         "expected": [
           "快速戰鬥"
@@ -120,6 +134,7 @@
   },
   "星塔_回到出发界面_agent": {
     "recognition": {
+      "type": "OCR",
       "param": {
         "expected": [
           "星塔探索"

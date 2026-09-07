@@ -1,111 +1,169 @@
+import re
+
 import numpy as np
 from maa.agent.agent_server import AgentServer
 from maa.custom_recognition import CustomRecognition
 from maa.context import Context
-from maa.define import Rect
 
 from utils import logger as logger_module
 from utils.dev_config import DEV_IMAGES_SAVE_ENABLED
+
 logger = logger_module.get_logger("climb_tower_quiz")
 
 
-@AgentServer.custom_recognition("quiz_recognition")
-class QuizRecognition(CustomRecognition):
-    ROIS = {
-        2: [670, 300, 590, 230],
-        3: [670, 250, 590, 325],
-        4: [670, 200, 590, 450]
-    }
+def _match_regex(actual: str, pattern: str | list | tuple | None) -> bool:
+    if pattern is None or actual is None:
+        return False
+
+    if isinstance(pattern, (list, tuple)):
+        return any(_match_regex(actual, item) for item in pattern)
+
+    expr = str(pattern).strip()
+    text = str(actual).strip()
+    if not expr or not text:
+        return False
+
+    try:
+        return re.search(expr, text, flags=re.IGNORECASE) is not None
+    except re.error:
+        return re.search(re.escape(expr), text, flags=re.IGNORECASE) is not None
+
+
+@AgentServer.custom_recognition("event_recognition")
+class EventRecognition(CustomRecognition):
+
     def analyze(
             self,
             context: Context,
             argv: CustomRecognition.AnalyzeArg,
     ) -> CustomRecognition.AnalyzeResult:
-        answer_count = 0
-        default_box = [0, 0, 0, 0]
+        # 获取选项规则，选项规则在AscensionPreparation动作节点读取并存储在本节点的attach中rules中
+        node_data = context.get_node_data(argv.node_name)
+        rules = node_data.get("attach", {}).get("rules", [])
+        lang_type = node_data.get("attach", {}).get("lang_type", "cn")
 
-        # 根据选项数量定位roi
-        reco_result = context.run_recognition("星塔_节点_随便选择_agent", argv.image)
-        if reco_result and reco_result.hit:
-            answer_count = len(reco_result.filtered_results)
-            default_box = reco_result.best_result.box
-
-        if answer_count == 1:
-            # 有时候因为不够金币导致只有部分选项生效
-            logger.warning(f"[问题选择] 只检测到1个有效选项，选择该选项")
-            return CustomRecognition.AnalyzeResult(box=default_box, detail={})
-
-        if not answer_count or answer_count not in self.ROIS:
-            logger.error(f"[问题选择] 检测选项个数出现问题")
+        # 识别画面中的问题及选项
+        question_text = self._get_question_text(context, argv.image, lang_type)
+        logger.info(f"[对话选择] 问题：{question_text}")
+        choices, consequences, choice_boxes = self._get_choice_texts(context, argv.image, lang_type)
+        if not choice_boxes:
             return CustomRecognition.AnalyzeResult(box=None, detail={})
 
-        # 寻找最佳答案
-        roi = self.ROIS[answer_count]
-        result_box = self._get_best_answer(context, argv.image, roi)
-        if result_box:
-            return CustomRecognition.AnalyzeResult(box=result_box, detail={})
+        # 根据规则遍历选项列表，找到匹配的选项，匹配方法只使用正则表达式
+        # 每一条规则包含 "question"、"choices"、"consequences" 三个字段，分别对应问题、选项、选项后果
+        # 还有一个 "description" 字段，用于描述该规则的作用
+        # 这些字段均为列表，每个元素为一个字符串
+        # 如字段不为空，则必须匹配到列表中的任意一个元素才算成功（为空时直接算作匹配成功）
+        # 如三个字段都不为空，则必须三个字段都匹配到元素才能算成功
+        result_box = None
+        result_choice = ""
+        result_consequence = ""
+        def _match_field(text: str, patterns: list[str] | str | None) -> bool:
+            """字段为空或未配置时不作限制（视为匹配成功）；非空时需命中列表中任意一项。"""
+            return not patterns or _match_regex(text, patterns)
 
-        # 寻找赌 650 金币的答案
-        result_box = self._get_650_answer(context, argv.image, roi)
-        if result_box:
-            return CustomRecognition.AnalyzeResult(box=result_box, detail={})
+        for rule in rules:
+            rule_q = rule.get("question")
+            rule_c = rule.get("choices")
+            rule_cq = rule.get("consequences")
+            rule_d = rule.get("description", "")
 
-        # 兜底，选择第一个选项
-        logger.info(f"[问题选择] 选择第一个选项")
-        if DEV_IMAGES_SAVE_ENABLED:
-            from utils.image_handler import save_image
-            save_image(argv.image, f"未知选项")
-        return CustomRecognition.AnalyzeResult(box=default_box, detail={})
+            # 1. 匹配问题：配置了问题则必须匹配通过
+            if not _match_field(question_text, rule_q):
+                continue
+
+            # 避免空规则导致的无差别命中（不允许选项或者后果均未配置的空规则，特别是仅配置了问题的规则）
+            if not rule_c and not rule_cq:
+                continue
+
+            # 2. 匹配选项与后果：非空字段必须全部满足（AND 关系）
+            for choice_text, consequence_text, box in zip(choices, consequences, choice_boxes):
+                if _match_field(choice_text, rule_c) and _match_field(consequence_text, rule_cq):
+                    logger.info(f"[对话选择] 命中规则：{rule_d}")
+                    logger.info(f"[对话选择] 选择选项：{choice_text}")
+                    logger.info(f"[对话选择] 后果: {consequence_text}")
+                    logger.debug(f"规则内容: {rule}")
+                    result_choice = choice_text
+                    result_consequence = consequence_text
+                    result_box = box
+                    break
+
+            # 3. 匹配成功后，退出循环
+            if result_box:
+                break
+
+        # 兜底：未命中任何规则时选择第一个选项
+        if not result_box:
+            result_box = choice_boxes[0]
+            result_choice = choices[0]
+            result_consequence = consequences[0]
+            logger.info(f"[对话选择] 未命中任何规则，保底选择第一个选项")
+            logger.info(f"[对话选择] 选择选项：{result_choice}")
+            logger.debug(f"[对话选择] 后果: {result_consequence}")
+            if DEV_IMAGES_SAVE_ENABLED:
+                from utils.image_handler import save_image
+                save_image(argv.image, f"未知选项")
+
+        # 回写attach，以便潜能选择节点使用
+        pipeline_override = {
+            argv.node_name: {
+                "attach":{
+                    "last_question": question_text,
+                    "last_choice": result_choice,
+                    "last_consequence": result_consequence,
+                }
+            }
+        }
+        context.override_pipeline(pipeline_override)
+
+        # 输出识别结果
+        return CustomRecognition.AnalyzeResult(box=result_box, detail={})
 
     @staticmethod
-    def _get_best_answer(context: Context, image: np.ndarray, roi: list) -> Rect | None:
-        pipeline_override = {
-            "星塔_节点_进行对话选择_agent":
-                {
-                     "recognition": {
-                         "param": {
-                             "roi": roi
-                         }
-                    }
-                }
-        }
-        reco_result = context.run_recognition(
-            "星塔_节点_进行对话选择_agent",
-            image,
-            pipeline_override=pipeline_override
-        )
-        if reco_result and reco_result.hit:
-            target_text = reco_result.best_result.text
-            target_box = reco_result.best_result.box
-            logger.info(f"[问题选择] 选择答案：{target_text}")
-            return target_box
-
-        return None
+    def _get_question_text(context: Context, image: np.ndarray, lang_type: str) -> str:
+        reco_result = context.run_recognition("星塔_节点_对话选择_定位问题位置_agent", image)
+        if not reco_result or not reco_result.hit:
+            return ""
+        # 在pipeline直接抓取识别结果，所以这里不需要把识别结果传递给下一个节点
+        reco_result = context.run_recognition("星塔_节点_对话选择_识别问题文本_agent", image)
+        if not reco_result or not reco_result.hit:
+            return ""
+        # 合并文本，根据语言类型选择不同的分割符
+        split_text = " " if lang_type == "en" else ""
+        return split_text.join([r.text for r in reco_result.filtered_results])
 
     @staticmethod
-    def _get_650_answer(context: Context, image: np.ndarray, roi: list) -> list | None:
-        pipeline_override = {
-            "星塔_节点_进行对话选择_寻找650金币选项_agent":
-                {
-                     "recognition": {
-                         "param": {
-                             "roi": roi
-                         }
-                    }
-                }
-        }
-        reco_result = context.run_recognition(
-            "星塔_节点_进行对话选择_寻找650金币选项_agent",
-            image,
-            pipeline_override=pipeline_override
-        )
-        if reco_result and reco_result.hit:
-            target_text = reco_result.best_result.text
-            target_box = reco_result.best_result.box
-            logger.info(f"[问题选择] 选择650金币的选项")
-            logger.debug(target_text)
+    def _get_choice_texts(context: Context, image: np.ndarray, lang_type: str) -> tuple[list, list, list]:
+        reco_result = context.run_recognition("星塔_节点_对话选择_定位选项位置_agent", image)
+        if not reco_result or not reco_result.hit:
+            return [], [], []
 
-            fixed_box = [target_box[0], target_box[1]-55, target_box[2]-100, target_box[3]]
-            return fixed_box
+        choices = []
+        consequences = []
+        choice_boxes = []
+        split_text = " " if lang_type == "en" else ""
+        for r in reco_result.filtered_results:
+            box = r.box
+            choice_boxes.append(box)
 
-        return None
+            # 节点覆写，指定roi为当前选项的box
+            choice_node = "星塔_节点_对话选择_识别选项文本_agent"
+            consequence_node = "星塔_节点_对话选择_识别选项后果_agent"
+            pipeline_override_box = {"recognition": {"param": {"roi": box}}}
+            override_choice = {choice_node: pipeline_override_box}
+            override_consequence = {consequence_node: pipeline_override_box}
+
+            # 开始识别
+            reco_choice = context.run_recognition(choice_node, image, pipeline_override=override_choice)
+            if reco_choice and reco_choice.hit:
+                choices.append(split_text.join([r.text for r in reco_choice.filtered_results]))
+            else:
+                choices.append("")
+
+            reco_consequence = context.run_recognition(consequence_node, image, pipeline_override=override_consequence)
+            if reco_consequence and reco_consequence.hit:
+                consequences.append(split_text.join([r.text for r in reco_consequence.filtered_results]))
+            else:
+                consequences.append("")
+
+        return choices, consequences, choice_boxes

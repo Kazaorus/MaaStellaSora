@@ -1,0 +1,33 @@
+[
+  {
+    "choices": [
+      "Just a try",
+      "Twelve o'clock",
+      "follow it through",
+      "aims high",
+      "always three options",
+      "6?",
+      "more veg things",
+      "sit too long",
+      "12?",
+      "Carpe diem",
+      "governed by desire",
+      "1024",
+      "light it up",
+      "I'll listen to anything",
+      "I'm willing to pay for this",
+      "Victory beckons",
+      "Get stronger",
+      "Can I play it",
+      "Anywhere my heart leads",
+      "We are Kindred spirits"
+    ],
+    "description": "问答选项"
+  },
+  {
+    "consequences": [
+      "650"
+    ],
+    "description": "650金币的选项"
+  }
+]

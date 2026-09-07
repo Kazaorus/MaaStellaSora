@@ -1,4 +1,9 @@
 {
+  "星塔_入口_agent": {
+    "attach": {
+      "event_rules": "ascension_event_jp.json"
+    }
+  },
   "星塔_出发_agent": {
     "recognition": {
       "param": {

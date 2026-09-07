@@ -29,7 +29,7 @@ class RecommendationHandler(ChoosePotentialHandler):
 
         # 输出当前潜能列表到日志
         for potential in self.data.potentials:
-            lvl = "99" if potential.recommended_level < 0 and potential.recommended else potential.recommended_level
+            lvl = 99 if potential.recommended_level < 0 and potential.recommended else potential.recommended_level
             recommended_output = f"系统推荐{lvl}级" if lvl > 0 else "无"
             if self.data.core_potential:
                 logger.info(f"[潜能识别] {potential.name} | 核心潜能 | {recommended_output}")

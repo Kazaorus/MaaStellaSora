@@ -61,6 +61,7 @@ class AscensionPreparation(CustomAction):
         # 导入对话选项预案
         event_rules_file = attachments.get("event_rules", "")
         event_rules_path = Path(os.path.abspath(__file__)).parent.parent.parent / "agent_config" / event_rules_file
+        event_rules_path = event_rules_path.with_suffix(".json")
         event_rules = self._load_event_rules(event_rules_path)
         if not event_rules: # 不允许空规则
             logger.error(f"无法加载对话选项规则'{event_rules_file}'")

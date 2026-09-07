@@ -16,6 +16,7 @@
                 "新版爬塔_商店_潜能特饮折扣",
                 "新版爬塔_商店_5个音符折扣",
                 "新版爬塔_商店_15个音符折扣",
+                "新版爬塔_选项策略文件",
                 "新版爬塔_商店_最大强化金额",
                 "新版爬塔_商店_初始强化金额"
             ]
@@ -653,6 +654,41 @@
                 "星塔_节点_商店_强化_agent": {
                     "attach": {
                         "max_cost": "{最大强化金额}"
+                    }
+                }
+            }
+        },
+        "新版爬塔_选项策略文件": {
+            "type": "select",
+            "label": "选项策略文件",
+            "description": "爬塔事件的对话选项策略通过json文件配置，存放在程序的/agent/agent_config/目录下",
+            "default_case": "默认",
+            "cases": [
+                {
+                    "name": "默认"
+                },
+                {
+                    "name": "自定义文件",
+                    "option": [
+                        "新版爬塔_选项策略文件_自定义"
+                    ]
+                }
+            ]
+        },
+        "新版爬塔_选项策略文件_自定义": {
+            "type": "input",
+            "inputs": [
+                {
+                    "name": "选项策略文件名",
+                    "pipeline_type": "string",
+                    "default": "ascension_event_custom.json",
+                    "description": "如要使用自定义策略，请一定要新建新的json文件，不要使用默认策略的文件名，否则升级时会导致策略文件被覆盖！"
+                }
+            ],
+            "pipeline_override": {
+                "星塔_入口_agent": {
+                    "attach": {
+                        "event_rules": "{选项策略文件名}"
                     }
                 }
             }

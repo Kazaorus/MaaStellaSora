@@ -134,7 +134,7 @@ class RecommendationHandler(ChoosePotentialHandler):
         # 如果重新启动过agent再从途中开始，会丢失潜能数据，到时候推荐等级取得一定会有问题，所以要提示用户最好不要中断
         if isinstance(p, Potential) and p.old_level > 0 and not p.recommended:
             p.recommended_level = State.owned_potentials.find_recommended_level(p.name, mode="FUZZY", trekker=p.trekker)
-            p.recommended = True if p.recommended_level >= 0 else False
+            p.recommended = True if p.recommended_level > 0 else False
         # 传入OwnedPotential对象时，需要设置等级跨度，然后转为Potential对象处理
         if isinstance(p, OwnedPotential):
             if level_span == 0:

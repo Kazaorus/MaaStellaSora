@@ -24,11 +24,12 @@ class RecommendationHandler(ChoosePotentialHandler):
         self._update_recommended_potentials()
         self._update_names()
         self._update_levels()
-        self._update_trekkers()
+        if self.data.params.environment.startswith("tower_8"):
+            self._update_trekkers()
 
         # 输出当前潜能列表到日志
         for potential in self.data.potentials:
-            lvl = "?" if potential.recommended_level < 0 and potential.recommended else potential.recommended_level
+            lvl = "99" if potential.recommended_level < 0 and potential.recommended else potential.recommended_level
             recommended_output = f"系统推荐{lvl}级" if lvl > 0 else "无"
             if self.data.core_potential:
                 logger.info(f"[潜能识别] {potential.name} | 核心潜能 | {recommended_output}")
@@ -118,8 +119,8 @@ class RecommendationHandler(ChoosePotentialHandler):
         threshold = round(self.data.threshold * (1 - self.data.params.threshold_decay * self.data.refresh_count), 2)
         threshold = max(0.0, threshold)
 
-        # 当前牌到达刷新分数阈值，直接选当前最优，否则返回 None 让外层刷新。
-        logger.info(f"当前最优牌 {best_potential.name} 得分 {best_potential.score}，阈值 {threshold}")
+        # 当前潜能到达刷新分数阈值，直接选当前最优，否则返回 None 让外层刷新。
+        logger.info(f"当前最优潜能 {best_potential.name} 得分 {best_potential.score}，阈值 {threshold}")
         if best_potential.score >= threshold:
             self._tower_8_record(best_potential)
             return best_potential

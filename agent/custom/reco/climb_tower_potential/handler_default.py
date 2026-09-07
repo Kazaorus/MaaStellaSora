@@ -168,9 +168,12 @@ class ChoosePotentialHandler:
         # 都没有的话，放弃选择，系统选了哪张就哪张
         return self._default_potential
 
-    def refresh(self):
-        self.screen.refresh()
+    def refresh(self) -> bool:
+        refresh_result = self.screen.refresh()
+        if not refresh_result:
+            return False
         self.data.refresh_count += 1
+        return True
 
     @property
     def _default_potential(self):

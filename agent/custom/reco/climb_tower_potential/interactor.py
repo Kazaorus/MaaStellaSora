@@ -20,9 +20,13 @@ class PotentialInteractor:
     def crop_screenshot(self, roi: list[int]) -> numpy.ndarray:
         return self.image[roi[1]:roi[1] + roi[3], roi[0]:roi[0] + roi[2]]
 
-    def refresh(self):
-        self.context.run_task("星塔_节点_选择潜能_点击刷新_agent")
+    def refresh(self) -> bool:
+        run_result = self.context.run_task("星塔_节点_选择潜能_点击刷新_agent")
+        if not run_result or not run_result.status.succeeded:
+            logger.error(f"点击刷新潜能失败")
+            return False
         self.screenshot()
+        return True
 
     def click_potential(self, box: list[int]) -> bool:
         """点击指定box，返回点击结果，True表示点击成功，False表示点击失败"""

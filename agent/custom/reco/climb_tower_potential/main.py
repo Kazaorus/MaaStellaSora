@@ -77,7 +77,11 @@ class ChoosePotentialRecognition(CustomRecognition):
                 break
             elif data.refreshable:
                 logger.info("没有找到符合条件的潜能，尝试刷新")
-                handler.refresh()
+                refresh_result = handler.refresh()
+                if not refresh_result:
+                    logger.error(f"刷新潜能失败。本错误为罕见错误，为保证爬塔质量，将结束任务")
+                    context.tasker.post_stop()
+                    return CustomRecognition.AnalyzeResult(box=None, detail={})
             else:
                 logger.info("[潜能选择] 没有找到符合条件的潜能，将按照保底顺序选择")
                 potential = handler.choose_fallback_potential()
@@ -86,7 +90,9 @@ class ChoosePotentialRecognition(CustomRecognition):
         # 点击潜能
         click_result = handler.pick(potential)
         if not click_result:
-            logger.error(f"点击潜能失败")
+            logger.error(f"点击潜能失败。本错误为罕见错误，为保证爬塔质量，将结束任务")
+            context.tasker.post_stop()
+            return CustomRecognition.AnalyzeResult(box=None, detail={})
 
         # 保存已选潜能数据到状态类中
         if isinstance(handler, (AssistantPriorityHandler, RecommendationHandler)):

@@ -64,7 +64,9 @@ class StartWindowsTests(unittest.TestCase):
     def test_runtime_uses_background_win32_input_for_launcher(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            (root / "assets" / "resource" / "base").mkdir(parents=True)
+            (root / "assets" / "resource" / "base" / "model" / "ocr").mkdir(
+                parents=True
+            )
             (root / "assets" / "resource" / "windows").mkdir(parents=True)
             captured: dict[str, object] = {}
 

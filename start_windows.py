@@ -228,9 +228,11 @@ def _resource_root(config: LaunchConfig) -> Path:
         )
     )
     for candidate in candidates:
-        if (candidate / "base").is_dir() and (candidate / "windows").is_dir():
+        if (candidate / "base").is_dir() \
+        and (candidate / "windows").is_dir() \
+        and (candidate / "base" / "model" / "ocr").is_dir():
             return candidate
-    raise LaunchError("未找到 Maa 资源目录，需要同时包含 resource/base 和 resource/windows")
+    raise LaunchError("未找到 Maa 资源目录，需要同时包含 resource/base、 resource/base/model/ocr 和 resource/windows")
 
 
 def _load_runtime(project_root: Path) -> RuntimeBindings:
@@ -369,7 +371,7 @@ def default_project_root() -> Path:
     """Return the directory containing external runtime resources."""
 
     if getattr(sys, "frozen", False):
-        return Path(sys.executable).resolve().parent
+        return Path(sys.executable).parent
     return Path(__file__).resolve().parent
 
 

@@ -16,6 +16,10 @@
       "param": {
         "expected": [
           "(?i)auto"
+        ],
+        "replace": [
+          "Ó",
+          "O"
         ]
       }
     }

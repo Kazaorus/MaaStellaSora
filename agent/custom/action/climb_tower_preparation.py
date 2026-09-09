@@ -9,16 +9,19 @@ from maa.agent.agent_server import AgentServer
 from maa.custom_action import CustomAction
 from maa.context import Context
 
+from custom.reco import climb_tower_potential
+
 from utils import logger as logger_module
+
 logger = logger_module.get_logger("climb_tower_preparation")
 
 
 @AgentServer.custom_action("ascension_preparation")
 class AscensionPreparation(CustomAction):
     def run(
-        self,
-        context: Context,
-        argv: CustomAction.RunArg,
+            self,
+            context: Context,
+            argv: CustomAction.RunArg,
     ) -> bool:
         """检查并导入预设文件，为爬塔流程做准备
 
@@ -29,12 +32,90 @@ class AscensionPreparation(CustomAction):
         Returns:
             bool: 成功时返回 True，失败时返回 False。
         """
+        # 获取当前节点的attach数据
+        preparation_node_data = context.get_node_data(argv.node_name)
+        attachments = preparation_node_data.get("attach", {})
 
-        # 导入json作业参数
-        node_data = context.get_node_data(argv.node_name)
-        preset_path = Path(os.path.abspath(__file__)).parent.parent.parent / "presets"
+        # 获得潜能选择节点的attach数据，以获取潜能模式
+        potential_attachments = context.get_node_data("星塔_节点_选择潜能_agent").get("attach", {})
+        handler = potential_attachments.get("handler", "")
+
+        # 如果潜能模式为json时，导入json作业参数
+        if handler == "json":
+            preset_path = Path(os.path.abspath(__file__)).parent.parent.parent / "presets"
+            json_import_result = self._import_json_priority_list(context, preparation_node_data, preset_path)
+            if not json_import_result:
+                return False
+
+        # 如果潜能模式为preset时，检查刷新阈值能否被转为float类型
+        if handler.startswith("preset"):
+            threshold_coef_str = potential_attachments.get("threshold_coef_str", "")
+            threshold_decay_str = potential_attachments.get("threshold_decay_str", "")
+            try:
+                float(threshold_coef_str)
+                float(threshold_decay_str)
+            except ValueError:
+                logger.error(f"刷新阈值系数{threshold_coef_str}或衰减系数{threshold_decay_str}设置有误，请重新检查")
+                return False
+
+        # 导入对话选项预案
+        event_rules_file = attachments.get("event_rules", "")
+        event_rules_path = Path(os.path.abspath(__file__)).parent.parent.parent / "agent_config" / event_rules_file
+        event_rules_path = event_rules_path.with_suffix(".json")
+        event_rules = self._load_event_rules(event_rules_path)
+        if not event_rules: # 不允许空规则
+            logger.error(f"无法加载对话选项规则'{event_rules_file}'")
+            return False
+        context.override_pipeline({"星塔_节点_进行对话选择_agent": {"attach": {"rules": event_rules}}})
+        logger.info(f"已导入对话选项规则'{event_rules_file}'，共有{len(event_rules)}条记录")
+
+        # 清除潜能状态
+        reset_state = attachments.get("reset_state", False)
+        if reset_state:
+            climb_tower_potential.State.reset()
+
+        return True
+
+    @staticmethod
+    def _load_event_rules(event_rules_path: Path) -> list:
+        """加载对话选项规则文件
+
+        Args:
+            event_rules_path (Path): 对话选项规则文件路径。
+
+        Returns:
+            list: 对话选项规则列表。
+        """
+        try:
+            with open(event_rules_path, "r", encoding="utf-8") as f:
+                content = f.read()
+                # 因为规则可能作为正则使用，若预案中包含未转义的加号(+)会影响匹配，先做文本层面检查并给出提示
+                if "+" in content:
+                    logger.warning(
+                        f"对话选项规则'{event_rules_path}'中包含加号(+)\n作为正则元字符，可能需要转义以避免解析或匹配异常")
+                event_rules = json.loads(content)
+                if not isinstance(event_rules, list):
+                    logger.error(f"对话选项规则文件'{event_rules_path}'解析后不是列表类型，无法使用")
+                    return []
+                if not event_rules:
+                    logger.error(f"对话选项规则文件'{event_rules_path}'解析后为空，无法使用")
+                    return []
+                return event_rules
+        except FileNotFoundError:
+            logger.error(f"无法找到对话选项规则文件：{event_rules_path}")
+            logger.error(f"请核实文件名字是否正确，或文件是否存在等")
+            return []
+        except json.decoder.JSONDecodeError as e:
+            logger.error(f"无法解析对话选项规则文件，错误信息：{e}")
+            logger.error("请核实json内容的格式是否正确")
+            return []
+        except OSError as e:
+            logger.error(f"读取文件失败：{e}")
+            logger.error("请核实文件权限是否正确，或是否存在文件编码问题等")
+            return []
+
+    def _import_json_priority_list(self, context: Context, node_data: dict, preset_path: Path) -> bool:
         full_path = ""
-
         try:
             preset_name = node_data["attach"]["preset_name"]
 
@@ -59,13 +140,11 @@ class AscensionPreparation(CustomAction):
         except json.decoder.JSONDecodeError as e:
             logger.error(f"无法解析作业文件，错误信息：{e}")
             logger.error("请核实json内容的格式是否正确")
-            context.tasker.post_stop()
             return False
 
         err = self._validate_priority_list(priority_list)
         if err:
             logger.error(f"潜能优先级设置校验失败：{err}")
-            context.tasker.post_stop()
             return False
 
         context.override_pipeline({
@@ -157,9 +236,7 @@ class AscensionPreparation(CustomAction):
                     })
                 else:
                     logger.error(f"导入音符：{melody} 失败，请核实音符名是否符合文档要求")
-                    context.tasker.post_stop()
                     return False
-
 
         logger.info(f"已导入预设作业：{preset_name}")
         return True
@@ -290,7 +367,6 @@ class AscensionPreparation(CustomAction):
 
 @AgentServer.custom_action("select_party")
 class SelectParty(CustomAction):
-
     NAME_ROI = {
         "main": [574, 500, 170, 55],
         "sub1": [235, 466, 170, 55],
@@ -298,9 +374,9 @@ class SelectParty(CustomAction):
     }
 
     def run(
-        self,
-        context: Context,
-        argv: CustomAction.RunArg,
+            self,
+            context: Context,
+            argv: CustomAction.RunArg,
     ) -> bool:
         """选择队伍
 
@@ -334,7 +410,7 @@ class SelectParty(CustomAction):
 
         for p in range(6):
             image = context.tasker.controller.post_screencap().wait().get()
-            logger.debug(f"开始识别第{p+1}个队伍")
+            logger.debug(f"开始识别第{p + 1}个队伍")
             reco_names = []
             for position, roi in self.NAME_ROI.items():
                 logger.debug(f"开始识别{position}位置的旅人名称")

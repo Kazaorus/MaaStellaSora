@@ -6,15 +6,19 @@ from maa.agent.agent_server import AgentServer
 from maa.toolkit import Toolkit
 
 # 添加agent目录，解决便携版python不自动添加脚本目录的问题
+# 任何agent目录下的导入都必须在这个代码之后进行
 AGENT_DIR = Path(__file__).resolve().parent
 if str(AGENT_DIR) not in sys.path:
     sys.path.insert(0, str(AGENT_DIR))
+
+# 导入dev_config，以获取DEBUG_MODE
+from utils.dev_config import DEBUG_MODE
 
 # 导入自定义的action和recognition，以注册到AgentServer
 import custom # noqa: F401
 
 # 开启debug_mode
-if os.getenv("APP_DEBUG", "false").lower() == "true":
+if os.getenv("APP_DEBUG", "false").lower() == "true" or DEBUG_MODE:
     from utils import logger
     logger.debug_mode()
 

@@ -12,7 +12,9 @@
       "[JumpBack]通用_返回主页"
     ],
     "attach": {
-      "preset_name": ""
+      "preset_name": "",
+      "reset_state": false,
+      "event_rules": "ascension_event_cn.json"
     }
   },
   "星塔_出发_agent": {

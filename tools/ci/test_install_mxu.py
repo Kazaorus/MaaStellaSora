@@ -148,6 +148,10 @@ class InstallMxuTests(unittest.TestCase):
             "project README.md",
         )
         self.assertEqual(
+            (output / "start_windows.py").read_text(encoding="utf-8"),
+            "project start_windows.py",
+        )
+        self.assertEqual(
             (self.root / "assets" / "interface.json").read_text(encoding="utf-8"),
             source_interface,
         )

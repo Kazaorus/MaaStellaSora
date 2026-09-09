@@ -1,0 +1,19 @@
+{
+    "启动器_开始游戏": {
+        "recognition": {
+            "type": "OCR",
+            "param": {
+                "expected": [
+                    "开始游戏",
+                    "Start Game",
+                    "ゲーム開始"
+                ]
+            }
+        },
+        "action": {
+            "type": "Click"
+        },
+        "timeout": 30000,
+        "post_delay": 1000
+    }
+}

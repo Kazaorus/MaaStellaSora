@@ -13,6 +13,8 @@ on:
       - ".github/workflows/install.yml"
       - "assets/interface.json"
       - "requirements.txt"
+      - "start_windows.py"
+      - "assets/resource/windows/**"
       - "tools/ci/**"
   workflow_dispatch:
 

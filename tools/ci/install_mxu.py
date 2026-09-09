@@ -31,7 +31,13 @@ COPY_IGNORE = shutil.ignore_patterns(
 )
 TOP_LEVEL_RUNTIME_DIRS = ("cache", "config", "debug", "logs")
 ALLOWED_STAGING_ENTRIES = ("deps", "python")
-PROJECT_FILES = ("README.md", "LICENSE", "CONTACT", "requirements.txt")
+PROJECT_FILES = (
+    "README.md",
+    "LICENSE",
+    "CONTACT",
+    "requirements.txt",
+    "start_windows.py",
+)
 THIRD_PARTY_LICENSES = ("LICENSE-MaaFramework", "LICENSE-MaaCommonAssets")
 REQUIRED_MAAFW_FILES = (
     "MaaFramework.dll",
@@ -226,6 +232,7 @@ def validate_package(install_dir: Path) -> dict[str, Any]:
         "README.md",
         "CONTACT",
         "requirements.txt",
+        "start_windows.py",
     )
     for relative_path in required_files:
         _require_file(install_dir / relative_path)

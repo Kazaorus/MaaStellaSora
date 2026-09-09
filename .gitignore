@@ -444,7 +444,8 @@ deps/*
 !deps/tools/
 deps/tools/*
 !deps/tools/*.schema.json
-build
+build/
+dist/
 install
 
 # Tools
@@ -461,3 +462,10 @@ debug
 
 merge_json_correct.py
 /agent/agent_config/dev_config.json
+
+AGENTS.md
+
+.agents/*
+.codex/*
+
+docs/superpowers

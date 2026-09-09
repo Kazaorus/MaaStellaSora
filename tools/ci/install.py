@@ -80,7 +80,13 @@ def install_resource():
 
 
 def install_chores():
-    for file in ["README.md", "LICENSE", "CONTACT", "requirements.txt"]:
+    for file in [
+        "README.md",
+        "LICENSE",
+        "CONTACT",
+        "requirements.txt",
+        "start_windows.py",
+    ]:
         shutil.copy2(
             working_dir / file,
             install_path,
